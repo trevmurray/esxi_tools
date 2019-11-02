@@ -1,0 +1,116 @@
+#!/usr/bin/env sh
+
+OPTIONS="Available options: list|status|info|start|stop|reboot"
+
+check_vm() {
+    for n in $VMNAME; do
+        if [ "$1" == "$n" ]; then
+            retval=0
+            break
+        fi
+    done
+    if [ -z $retval ]; then
+        echo "ERROR: $1 is not a valid VM"
+        exit
+    else
+        return $retval
+    fi
+}
+
+list_all_vm() {
+    vim-cmd vmsvc/getallvms
+}
+
+get_status() {
+    list_all_vm | grep $1 | awk '{print $1}' | xargs vim-cmd vmsvc/power.getstate
+}
+
+start_vm() {
+    list_all_vm | grep $1 | awk '{print $1}' | xargs vim-cmd vmsvc/power.on
+}
+
+stop_vm() {
+    list_all_vm | grep $1 | awk '{print $1}' | xargs vim-cmd vmsvc/power.off
+}
+
+reboot_vm() {
+    list_all_vm | grep $1 | awk '{print $1}' | xargs vim-cmd vmsvc/power.reboot
+}
+
+get_vm_id() {
+    list_all_vm | grep $1 | awk '{print $1}'
+}
+
+get_net_info() {
+    list_all_vm | grep $1 | awk '{print $1}' | xargs vim-cmd hostsvc/net/info
+}
+
+VMNAME=$(list_all_vm | awk '{print $2}' | awk '{if(NR>1)print}')
+
+if [ -z "$1" ]; then
+    echo "Usage: "
+    echo "    $OPTIONS"
+    exit
+elif [ $1 == "list" ]; then
+    list_all_vm
+elif [ $1 == "status" ]; then
+    if [[ -z "${2}" ]]; then
+        echo "ERROR: status requires you input a vm name"
+        exit
+    else
+        check_vm $2
+        if [ $retval == 0 ]; then
+            echo "Status of VM: $2  ...."
+            get_status $2
+        fi
+    fi
+elif [ $1 == "info" ]; then
+    if [[ -z "${2}" ]]; then
+        echo "ERROR: info requires you input a vm name"
+        exit
+    else
+        check_vm $2
+        if [ $retval == 0 ]; then
+            echo "Network info of VM: $2  ...."
+            get_net_info $2
+        fi
+    fi
+elif [ $1 == "start" ]; then
+    if [[ -z "${2}" ]]; then
+        echo "ERROR: start requires you input a vm name"
+        exit
+    else
+        check_vm $2
+        if [ $retval == 0 ]; then
+            echo "Starting of VM: $2  ...."
+            start_vm $2
+        fi
+    fi
+elif [ $1 == "stop" ]; then
+    if [[ -z "${2}" ]]; then
+        echo "ERROR: stop requires you input a vm name"
+        exit
+    else
+        check_vm $2
+        if [ $retval == 0 ]; then
+            echo "Stopping VM: $2  ...."
+            stop_vm $2
+        fi
+    fi
+elif [ $1 == "reboot" ]; then 
+    if [[ -z "${2}" ]]; then
+        echo "ERROR: reboot requires you input a vm name"
+        exit
+    else
+        check_vm $2
+        if [ $retval == 0 ]; then
+            echo "Rebooting VM: $2  ...."
+            reboot_vm $2
+        fi
+    fi
+else {
+    echo "ERROR: $1 is not a known command"
+    echo "  $OPTIONS"
+    exit
+}
+fi
